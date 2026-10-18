@@ -1,0 +1,93 @@
+spring:
+  application:
+    name: sh-bean
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  graphql:
+    cors:
+      allowed-origin-patterns: "*"
+      allowed-methods: GET,POST,OPTIONS
+      allow-credentials: true
+    websocket:
+      # Subscriptions (graphql-ws protocol); the JWT travels in connection_init, see WebSocketAuthInterceptor.
+      path: /graphql-ws
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    # Tiger Cloud pre-installs extension objects in public; baseline at 0 so V1 still runs.
+    baseline-on-migrate: true
+    baseline-version: 0
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    producer:
+      acks: all
+      properties:
+        # Bound how long a send can block when Kafka is down (publishing is best-effort).
+        max.block.ms: 5000
+        enable.idempotence: true
+    consumer:
+      auto-offset-reset: earliest
+  ai:
+    model:
+      # Set AI_CHAT_MODEL=none to run without Gemini (deterministic fallbacks are used).
+      chat: ${AI_CHAT_MODEL:google-genai}
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY:}
+        chat:
+          options:
+            model: ${GEMINI_MODEL:gemini-2.5-flash}
+            temperature: 0.2
+            thinking-budget: 0
+
+server:
+  # 8080 is commonly taken (e.g. local Jenkins); keep in sync with frontend/vite.config.ts.
+  port: ${SERVER_PORT:8090}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+app:
+  # Base URL partners use to reach /api/public/** (also the soulbound credential's metadata URI).
+  public-base-url: ${PUBLIC_BASE_URL:http://localhost:8090}
+  jwt:
+    secret: ${JWT_SECRET}
+    ttl: 1h
+  demo:
+    email: ${DEMO_USER_EMAIL:alex@demo.local}
+    password: ${DEMO_USER_PASSWORD:}
+  ai:
+    timeout: PT15S
+    cooldown: PT60S
+
+nessie:
+  base-url: ${NESSIE_BASE_URL:https://api.nessieisreal.com}
+  api-key: ${NESSIE_API_KEY}
+
+solana:
+  # Off by default (fiat-only settlement); the dev profile turns it on.
+  enabled: ${SOLANA_ENABLED:false}
+  # Hosted RPC providers put API keys in the URL; set it via the environment, never commit it.
+  rpc-url: ${SOLANA_RPC_URL:https://api.devnet.solana.com}
+  commitment: confirmed
+  confirm-timeout: PT45S
+  cluster: ${SOLANA_CLUSTER:devnet}
+  microloan-program-id: ${SOLANA_MICROLOAN_PROGRAM_ID:7RPbrV9Ft664iLK95bYsZbNascy9wwX57Tk6UCAM4uXk}
+  reputation-program-id: ${SOLANA_REPUTATION_PROGRAM_ID:HicA6FJxaS4DTqZL5reqxHmYcXyEKBsPkJnguMUPVnsh}
+  usdc-mint: ${SOLANA_USDC_MINT:Cmg8i52JnPxSXQ67a8pYaWBgJtUoMek5oz6bgb5DuNM3}
+  bank-keypair-path: ${SOLANA_BANK_KEYPAIR:${user.home}/.config/solana/shbean-bank.json}
+  # base64 of 32 random bytes, e.g. `openssl rand -base64 32`; never commit it.
+  wallet-master-key: ${WALLET_MASTER_KEY:}
+  pool-top-up-usdc: 10000
